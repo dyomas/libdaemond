@@ -72,7 +72,7 @@ static void vcolorprintf(const char * fmt, va_list va_args) {
 	while (*p) {
 		switch(*p) {
 			case '<':
-				if (end = strchr(p,'>')) {
+				if ((end = strchr(p,'>'))) {
 					p++;
 					//debug("matched color: %-.*s", end-p,p );
 					for (col = colors; col->n > 0; col++) {
@@ -125,7 +125,7 @@ static void colorprintf(const char * fmt, ...) {
 }
 
 // <r><sample>test</>
-int daemond_say(daemond * d, const char * fmt, ...) {
+void daemond_say(daemond * d, const char * fmt, ...) {
 	va_list va_args;
 	char * p = (char *)fmt;
 	p += strlen(fmt)-1;
@@ -141,7 +141,7 @@ int daemond_say(daemond * d, const char * fmt, ...) {
 	colorprintf("</>%s", *p == '\n' ? "" : "\n");
 }
 
-int daemond_printf(daemond * d, const char * fmt, ...) {
+void daemond_printf(daemond * d, const char * fmt, ...) {
 	va_list va_args;
 	char * p = (char *)fmt;
 	p += strlen(fmt)-1;
@@ -174,9 +174,9 @@ static int daemond_pid_openlocked( daemond_pid * pid, int recurse ) {
 	int r,err;
 	int created;
 	int fd;
-	int failures;
+	int failures = 0;
 	int ready = 0;
-	char * file = pid->pidfile;
+	const char * file = pid->pidfile;
 	struct stat sh,sf;
 	//debug("locking file %s", file);
 
@@ -346,7 +346,7 @@ void daemond_pid_write(daemond_pid * pid) {
 		die("Failed to sync pid after write: %s",ERR);
 }
 
-pid_t daemond_pid_read(daemond_pid * pid) {
+static pid_t daemond_pid_read(daemond_pid * pid) {
 	pid_t new;
 	if (! pid->handle )
 		die("Can't read unopened pidfile");
@@ -438,7 +438,7 @@ static int daemond_kill_wait( pid_t inpid, int sig, double interval ) {
 
 pid_t daemond_cli_kill(daemond_cli * cli, pid_t pid) {
 	//debug("killing %d...",pid);
-	float t;
+	//float t;
 	if (kill(pid,0) == 0) {
 		daemond_say(cli->d,"<y>killing %d with <b><w>INT</>", pid);
 		if ( daemond_kill_wait(pid, SIGINT, 1 ) ) {
@@ -477,7 +477,7 @@ void daemond_cli_run(daemond_cli * cli, int argc, char *argv[]) {
 		exit(255);
 	}
 	daemond_pid * pid = &cli->d->pid;
-	pid_t oldpid, killed;
+	pid_t oldpid, killed = 0;
 	char * command;
 	daemond_cli_com com;
 	
@@ -510,7 +510,7 @@ void daemond_cli_run(daemond_cli * cli, int argc, char *argv[]) {
 		//debug("pid locked by cli");
 	} else {
 		//debug("pid not locked (old=%d)", pid->oldpid);
-		if (oldpid = pid->oldpid) {
+		if ((oldpid = pid->oldpid)) {
 			//debug("have old pid: %d",pid->oldpid);
 			switch(com) {
 				case STOP:
@@ -532,10 +532,10 @@ void daemond_cli_run(daemond_cli * cli, int argc, char *argv[]) {
 				case START:
 					daemond_say(cli->d, "is <b><red>already running</> (pid <red>%d</>)",oldpid);
 					exit(255);
-				/*
 				default:
-					die("Unknown command: %s",command);
-				*/
+					//TODO whats happen in case of EXTENDED?
+					//die("Unknown command: %s",command);
+					break;
 			}
 		} else {
 			daemond_say(cli->d, "<r>pid neither locked nor have old value</>");
@@ -616,7 +616,7 @@ daemond_sig_t signals[] = {
 	{ 0,       NULL,      0, "", NULL,             NULL }
 };
 
-void daemond_sig_set(daemond * d, daemond_sig_t * sig) {
+static void daemond_sig_set(daemond * d, daemond_sig_t * sig) {
 	struct sigaction   sa;
 	
 		bzero(&sa, sizeof(struct sigaction));
@@ -649,7 +649,7 @@ void daemond_sig_init(daemond * d) {
 	memset( (void *) daemond_sig_received,0,NSIG );
 	
 	daemond_sig_t     *sig;
-	struct sigaction   sa;
+	//struct sigaction   sa;
 	
 	for (sig = signals; sig->signo != 0; sig++) {
 		daemond_sig_set(d, sig);
@@ -661,7 +661,7 @@ void daemond_sig_init(daemond * d) {
  */
 
 void daemond_daemonize(daemond * d) {
-	int fd, pidf, status;
+	int fd, status;//, pidf
 	pid_t pid, gone;
 	double t;
 	
@@ -837,7 +837,7 @@ void daemond_log_std_read(daemond * d) {
 			//debug("read %d bytes: '%s'",got, buf);
 			p += got;
 			while(p > buf) {
-				if (nl = strchr(buf, '\n')) {
+				if ((nl = strchr(buf, '\n'))) {
 					cut = nl-buf+1;
 					debug("got single string: '%-.*s'", cut,buf);
 					memmove(buf, buf + cut, p - buf + 1);
@@ -901,7 +901,7 @@ void daemond_sig_child_handler(int sig) {
 }
 
 
-int daemond_spawned(daemond * d) {
+static void daemond_spawned(daemond * d) {
 
 /*
 	
@@ -966,11 +966,11 @@ int daemond_fork(daemond * d, int slot) {
 }
 
 // should return 1 on master, 0 on child
-int daemond_check_children(daemond * d) {
+static int daemond_check_children(daemond * d) {
 	int i, do_fork = 0, running = 0;
 	pid_t pid;
 	for ( i=0; i < d->children_count; i++ ) {
-		if ( pid = d->children[i] ) {
+		if (( pid = d->children[i] )) {
 			if ( kill(pid,0) == 0 ) {
 				// ok
 				daemond_say(d,"<g>pid %d (slot %d) is alive",pid, i);
@@ -1072,8 +1072,8 @@ static void daemond_sig_safe_handler(daemond * d, int sig) {
 	
 }
 
-void daemond_sig_check(daemond * d) {
-	pid_t pid;
+static void daemond_sig_check(daemond * d) {
+	//pid_t pid;
 	int sig;
 		if(daemond_sig_was_received) {
 			for (sig=0; sig < NSIG; sig++) {
@@ -1089,7 +1089,7 @@ void daemond_sig_check(daemond * d) {
 
 void daemond_master(daemond * d) {
 	pid_t pid, children[ 10 ];
-	int i, sig;
+	int i;//, sig
 	
 	bzero( children, sizeof(children) );
 	d->children = children;
@@ -1121,7 +1121,7 @@ void daemond_master(daemond * d) {
 	if (d->children_running) {
 		debug("Terminating %d children",d->children_running);
 		for ( i=0; i < d->children_count; i++ ) {
-			if ( pid = d->children[i] ) {
+			if (( pid = d->children[i] )) {
 				if(kill(pid, SIGTERM) == -1) {
 					debug("kill TERM %d failed: %s", pid,ERR);
 				} else {
@@ -1137,7 +1137,7 @@ void daemond_master(daemond * d) {
 		}
 		if (d->children_running) {
 			for ( i=0; i < d->children_count; i++ ) {
-				if ( pid = d->children[i] ) {
+				if (( pid = d->children[i] )) {
 					if(kill(pid, SIGKILL) == -1) {
 						debug("kill KILL %d failed: %s", pid,ERR);
 					} else {
@@ -1158,6 +1158,6 @@ void daemond_master(daemond * d) {
 	exit(0);
 }
 
-void daemond_stop(daemond * d) {
-	
-}
+// static void daemond_stop(daemond * d) {
+// 	
+// }

@@ -11,6 +11,9 @@
 *.la
 *.a
 
+# Backup files, abandoned by some editors
+*~
+
 CMakeCache.txt
 CMakeFiles/
 Makefile

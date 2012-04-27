@@ -1,5 +1,6 @@
 #include "libdaemond.h"
 #include <stdlib.h>
+#include <unistd.h>
 
 #define debug(f, ...) fprintf(stderr, "[%d] " f " at %s line %d.\n", getpid(), ##__VA_ARGS__, __FILE__, __LINE__)
 
@@ -19,7 +20,7 @@ int main (int argc, char *argv[]) {
 	d.pid.verbose = 1;
 	
 	//daemond_run(&d);
-	
+
 	daemond_cli_run(&d.cli, argc-1, argv+1);
 	daemond_say(&d, "<g>starting up</>... (pidfile = %s, pid = <y>%d</>)", d.pid.pidfile, getpid());
 	daemond_daemonize(&d);

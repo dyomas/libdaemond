@@ -1,3 +1,6 @@
+#ifndef __libdaemond_h__
+#define __libdaemond_h__
+
 #include <sys/types.h>
 #include <stdio.h>
 #include <signal.h>
@@ -6,7 +9,7 @@ struct _daemond; // global container
 
 typedef struct {
 	struct _daemond * d;
-	char            * pidfile;
+	const char      * pidfile;
 	int               locked;
 	pid_t             owner;
 	pid_t             oldpid;
@@ -21,7 +24,7 @@ typedef struct {
 } daemond_cli;
 
 struct _daemond {
-	char            * name;
+	const char      * name;
 	int               use_pid;
 	int               force_quit;
 	int               detach;
@@ -57,7 +60,7 @@ typedef enum { START,CHECK,STOP,RESTART,EXTENDED } daemond_cli_com;
  * Speech functions
  */
 
-int   daemond_say(daemond * d, const char * fmt, ...);
+void   daemond_say(daemond * d, const char * fmt, ...);
 
 /*
  * Pid functions
@@ -109,3 +112,5 @@ void daemond_log_std_read(daemond * d);
 
 void daemond_init(daemond * d);
 void daemond_master(daemond * d);
+
+#endif //__libdaemond_h__
