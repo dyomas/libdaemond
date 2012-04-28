@@ -110,7 +110,7 @@ static void vcolorprintf(const char * fmt, va_list va_args) {
 	}
 	*b++ = 0;
 	//debug("composed buffer: '%s'",buf);
-	
+
 	vfprintf(stdout, buf, va_args);
 	fprintf(stdout,"\033[0m");
 	return;
@@ -122,6 +122,15 @@ static void colorprintf(const char * fmt, ...) {
 	va_start(va_args,fmt);
 	vcolorprintf(fmt, va_args);
 	va_end(va_args);
+}
+
+printer_t _G_printer = colorprintf;
+vprinter_t _G_vprinter = vcolorprintf;
+
+void set_printers(printer_t printer, vprinter_t vprinter)
+{
+	_G_printer = printer;
+	_G_vprinter = vprinter;
 }
 
 // <r><sample>test</>

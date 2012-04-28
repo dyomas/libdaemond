@@ -59,6 +59,10 @@ typedef enum { START,CHECK,STOP,RESTART,EXTENDED } daemond_cli_com;
 /*
  * Speech functions
  */
+typedef void (*printer_t)(const char * fmt, ...);
+typedef void (*vprinter_t)(const char * fmt, va_list va_args);
+
+void   set_printers(printer_t, vprinter_t);
 
 void   daemond_say(daemond * d, const char * fmt, ...);
 
