@@ -14,7 +14,7 @@ int main (int argc, char *argv[]) {
 	d.name = "sample";
 	
 	d.use_pid = 1;
-	d.detach = 1;
+	d.detach = 0;
 	
 	d.pid.pidfile = "/tmp/sample.pid";
 	d.pid.verbose = 1;

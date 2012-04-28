@@ -390,7 +390,7 @@ static double htime() {
 static int kill_ext(int pidgrp, int sig) {
 	pid_t pid;
 	pid_t grp;
-	if (pid < 0) {
+	if (pidgrp < 0) {
 		pid = -pidgrp;
 		grp = getpgid(pid);
 		if (grp != -1) {
@@ -464,6 +464,7 @@ pid_t daemond_cli_kill(daemond_cli * cli, pid_t pid) {
 	} else {
 		return errno == ESRCH ? pid : 0;
 	}
+	return pid;
 }
 
 void daemond_cli_usage(daemond_cli * cli) {
