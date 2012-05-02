@@ -20,7 +20,7 @@ typedef struct {
 
 typedef struct {
 	struct _daemond * d;
-	
+
 } daemond_cli;
 
 struct _daemond {
@@ -29,7 +29,7 @@ struct _daemond {
 	int               force_quit;
 	int               detach;
 	int               detached;
-	
+
 	int               die_count;
 	int               last_die_count;
 	int               max_die;
@@ -37,17 +37,17 @@ struct _daemond {
 	double            min_restart_interval;
 	double            restart_interval;
 	double            max_restart_interval;
-	
+
 	daemond_pid       pid;
 	daemond_cli       cli;
-	
+
 	int               stdout_fd;
 	int               stderr_fd;
-	
+
 	int               children_count;
 	int               children_running;
 	pid_t           * children;
-	
+
 	int               terminate;
 };
 
@@ -59,10 +59,10 @@ typedef enum { START,CHECK,STOP,RESTART,EXTENDED } daemond_cli_com;
 /*
  * Speech functions
  */
-typedef void (*printer_t)(const char * fmt, ...);
-typedef void (*vprinter_t)(const char * fmt, va_list va_args);
+typedef void (*tracer_t)(const char * fmt, va_list va_args);
 
-void   set_printers(printer_t, vprinter_t);
+void   set_tracer(const tracer_t);
+void   set_tracer_debug(const tracer_t);
 
 void   daemond_say(daemond * d, const char * fmt, ...);
 

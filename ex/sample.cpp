@@ -21,12 +21,13 @@ void usage(const char *me)
 {
   cout
     << "This is testsuite for \"libdaemond\" library" << endl
-    << "Usage: " << me << " [Options] [--] [CLI]" << endl
+    << "Usage: " << me << " [Options] [-- CLI]" << endl
     << "Options are:" << endl
     << "  -C - child processes count, default " << children_count_default << endl
     << "  -I - use internal CLI" << endl
     << "  -N - no detach" << endl
     << "  -P - PID file, not used if empty, default \"" << pidfile_default << "\"" << endl
+    << "  -T - reset tracers with b/w standard stream (controlled by \"-o\" option)" << endl
     << "  -i - input, default stdin, persistent file recommended in detach mode" << endl
     << "  -m - mode (test name), default " << mode_default << ":" << endl
     << "    1 - test_standard([-CINPio])" << endl
@@ -46,6 +47,46 @@ IOWrapper _G_io;
 int _G_children_count = children_count_default;
 bool _G_detach = true;
 bool _G_cli = false;
+
+void bw_console_tracer(const char * fmt, va_list va_args)
+{
+  ostream &os = _G_io;
+  const char *fmt_prev = fmt;
+  const char *fmt_begin;
+  string fmt_clean;
+
+  while ((fmt_begin = strchr(fmt_prev, '<')))
+  {
+    const char *fmt_end;
+    if ((fmt_end = strchr(fmt_begin, '>')))
+    {
+      fmt_clean.append(fmt_prev, fmt_begin);
+      fmt_prev = ++ fmt_end;
+    }
+    else
+    {
+      fmt_clean.append(fmt_prev, fmt_begin + 1);
+      fmt_prev = fmt_begin + 1;
+    }
+  }
+  fmt_clean.append(fmt_prev);
+
+  const size_t buff_size = 1024;
+  char buff[buff_size];
+  const int res = vsnprintf(buff, buff_size, fmt_clean.c_str(), va_args);
+  if (res > 0 && res <= static_cast<int>(buff_size))
+  {
+    os << buff;
+    os.flush();
+  }
+  else if (res)
+  {
+    cerr
+      << "*** \"vsnprintf\" failed" << endl
+    ;
+  }
+  return;
+}
 
 ostream &operator << (ostream &os, const daemond_pid &d)
 {
@@ -238,7 +279,7 @@ int main(int argc, char *argv[])
 
   try
   {
-    while ((ch = getopt(argc, argv, "C:INP:i:m:o:h")) != -1)
+    while ((ch = getopt(argc, argv, "C:INP:Ti:m:o:h")) != -1)
     {
       switch (ch)
       {
@@ -253,6 +294,10 @@ int main(int argc, char *argv[])
           break;
         case 'P':
           _G_pidfile = optarg;
+          break;
+        case 'T':
+          set_tracer(bw_console_tracer);
+          set_tracer_debug(bw_console_tracer);
           break;
         case 'i':
           _G_io.set_input(optarg);

@@ -24,9 +24,9 @@
 
 #include <syslog.h>
 
-#define debug(f, ...) fprintf(stderr, "[%d] " f " at %s line %d.\n", getpid(), ##__VA_ARGS__, __FILE__, __LINE__)
-#define warn(f, ...) fprintf(stderr, f " at %s line %d.\n", ##__VA_ARGS__, __FILE__, __LINE__)
-#define ewarn(f, ...) fprintf(stderr, f ": %s at %s line %d.\n", ##__VA_ARGS__, strerror(errno), __FILE__, __LINE__)
+#define debug(f, ...) debug_output("[%d] " f " at %s line %d.\n", getpid(), ##__VA_ARGS__, __FILE__, __LINE__)
+#define warn(f, ...) debug_output(f " at %s line %d.\n", ##__VA_ARGS__, __FILE__, __LINE__)
+#define ewarn(f, ...) debug_output(f ": %s at %s line %d.\n", ##__VA_ARGS__, strerror(errno), __FILE__, __LINE__)
 #define ERR strerror(errno)
 
 static void die (const char * f, ...) {
@@ -114,23 +114,41 @@ static void vcolorprintf(const char * fmt, va_list va_args) {
 	vfprintf(stdout, buf, va_args);
 	fprintf(stdout,"\033[0m");
 	return;
-	
+
 }
+
+static tracer_t _G_tracer = vcolorprintf;
 
 static void colorprintf(const char * fmt, ...) {
-	va_list va_args;
-	va_start(va_args,fmt);
-	vcolorprintf(fmt, va_args);
-	va_end(va_args);
+	if (_G_tracer) {
+		va_list va_args;
+		va_start(va_args,fmt);
+		_G_tracer(fmt, va_args);
+		va_end(va_args);
+	}
 }
 
-printer_t _G_printer = colorprintf;
-vprinter_t _G_vprinter = vcolorprintf;
+static void debug_output_default(const char * fmt, va_list va_args) {
+	vfprintf(stderr, fmt, va_args);
+}
 
-void set_printers(printer_t printer, vprinter_t vprinter)
-{
-	_G_printer = printer;
-	_G_vprinter = vprinter;
+static tracer_t _G_tracer_debug = debug_output_default;
+
+static void debug_output(const char * fmt, ...) {
+	if (_G_tracer_debug) {
+		va_list va_args;
+		va_start(va_args,fmt);
+		_G_tracer_debug(fmt, va_args);
+		va_end(va_args);
+	}
+}
+
+void set_tracer(const tracer_t tracer) {
+	_G_tracer = tracer;
+}
+
+void set_tracer_debug(const tracer_t tracer) {
+	_G_tracer_debug = tracer;
 }
 
 // <r><sample>test</>
@@ -138,15 +156,17 @@ void daemond_say(daemond * d, const char * fmt, ...) {
 	va_list va_args;
 	char * p = (char *)fmt;
 	p += strlen(fmt)-1;
-	
+
 	if (d) {
 		colorprintf("<g>%s</> - ", d->name);
 	}
-	
-	va_start(va_args,fmt);
-	vcolorprintf(fmt, va_args);
-	va_end(va_args);
-	
+
+	if (_G_tracer) {
+		va_start(va_args,fmt);
+		_G_tracer(fmt, va_args);
+		va_end(va_args);
+	}
+
 	colorprintf("</>%s", *p == '\n' ? "" : "\n");
 }
 
@@ -154,15 +174,18 @@ void daemond_printf(daemond * d, const char * fmt, ...) {
 	va_list va_args;
 	char * p = (char *)fmt;
 	p += strlen(fmt)-1;
-	
+
 	if (d) {
 		colorprintf("<g>%s</> - ", d->name);
 	}
-	
-	va_start(va_args,fmt);
-	vcolorprintf(fmt, va_args);
-	va_end(va_args);
-	
+
+	if (_G_tracer)
+	{
+		va_start(va_args,fmt);
+		_G_tracer(fmt, va_args);
+		va_end(va_args);
+	}
+
 	colorprintf("</>");
 }
 
@@ -192,7 +215,7 @@ static int daemond_pid_openlocked( daemond_pid * pid, int recurse ) {
 	if (recurse > 5) {
 		die("Fall into recursion during lock tries");
 	}
-	
+
 	while(!ready) {
 		if (file_exists( file )) {
 			//debug("file `%s' exists", file);
@@ -239,10 +262,10 @@ static int daemond_pid_openlocked( daemond_pid * pid, int recurse ) {
 			}
 		}
 	}
-	
+
 	//debug("call flock on %d",fd);
 	r = flock(fd, LOCK_EX|LOCK_NB);
-	
+
 	if (r == 0) {
 		//debug("flock successful");
 		if ( fstat(fd, &sh) == -1) {
@@ -269,7 +292,7 @@ static int daemond_pid_openlocked( daemond_pid * pid, int recurse ) {
 		pid->handle = fdopen(fd,"w+");
 		if (!pid->handle)
 			die("failed fdopen: %s",ERR);
-		
+
 	} else {
 		err = errno;
 		warn("%d: lock failed: %s", getpid(), strerror(err));
@@ -359,19 +382,19 @@ static pid_t daemond_pid_read(daemond_pid * pid) {
 	pid_t new;
 	if (! pid->handle )
 		die("Can't read unopened pidfile");
-	
+
 	if ( fsync( pid->fd ) == -1 )
 		die("Failed to sync pid before read: %s",ERR);
-	
+
 	if( fseek(pid->handle,0,SEEK_SET) == -1 )
 		die("Can't seek handle: %s",strerror(errno));
-	
+
 	if ( fscanf( pid->handle, "%d", &new ) != 1 )
 		die("Can't read pidfile: %s", strerror(errno));
-	
+
 	if( fseek(pid->handle,0,SEEK_SET) == -1 )
 		die("Can't rewind handle: %s",strerror(errno));
-	
+
 	return new;
 }
 
@@ -469,7 +492,7 @@ pid_t daemond_cli_kill(daemond_cli * cli, pid_t pid) {
 			}
 		}
 		daemond_say(cli->d,"<g>process %d is gone</>",pid);
-		
+
 	} else {
 		return errno == ESRCH ? pid : 0;
 	}
@@ -477,7 +500,7 @@ pid_t daemond_cli_kill(daemond_cli * cli, pid_t pid) {
 }
 
 void daemond_cli_usage(daemond_cli * cli) {
-	
+
 }
 
 void daemond_cli_run(daemond_cli * cli, int argc, char *argv[]) {
@@ -490,9 +513,9 @@ void daemond_cli_run(daemond_cli * cli, int argc, char *argv[]) {
 	pid_t oldpid, killed = 0;
 	char * command;
 	daemond_cli_com com;
-	
+
 	//daemond_cli_kill(cli,96202);exit(0);
-	
+
 	if (argc > 0) {
 		command = argv[0];
 		//debug("got command '%s'",command);
@@ -500,8 +523,8 @@ void daemond_cli_run(daemond_cli * cli, int argc, char *argv[]) {
 		daemond_say(cli->d, "<r>Need command");
 		exit(255);
 	}
-	
-	
+
+
 	if ( strcmp(command, "start") == 0 ) {
 		com = START;
 	} else
@@ -515,7 +538,7 @@ void daemond_cli_run(daemond_cli * cli, int argc, char *argv[]) {
 		com = CHECK;
 	} else
 		com = EXTENDED;
-	
+
 	if( daemond_pid_lock(pid) ) {
 		//debug("pid locked by cli");
 	} else {
@@ -552,19 +575,19 @@ void daemond_cli_run(daemond_cli * cli, int argc, char *argv[]) {
 			exit(255);
 		}
 	}
-	
+
 	if ( ( com == STOP || com == CHECK ) || ( com == RESTART && !killed ) )
 		daemond_say(cli->d, "<y><b>no instance running</>");
-	
+
 	if ( com == STOP || com == CHECK )
 		exit(0);
-	
+
 	if ( com != START && com != RESTART) {
 		daemond_say(cli->d, "<b><y>unknown command: <r>%s</>", command);
 		daemond_cli_usage( cli );
 		exit(0);
 	}
-	
+
 }
 
 /*
@@ -628,7 +651,7 @@ daemond_sig_t signals[] = {
 
 static void daemond_sig_set(daemond * d, daemond_sig_t * sig) {
 	struct sigaction   sa;
-	
+
 		bzero(&sa, sizeof(struct sigaction));
 		sa.sa_flags = sig->flags;
 		if ( sig->sihandler ) {
@@ -644,7 +667,7 @@ static void daemond_sig_set(daemond * d, daemond_sig_t * sig) {
 			sa.sa_handler = SIG_DFL;
 			sa.sa_flags  &= ~((unsigned int)SA_SIGINFO);
 		}
-		
+
 		sigemptyset(&sa.sa_mask);
 		if (sigaction(sig->signo, &sa, NULL) == -1) {
 			die("signal watcher sigaction(%s) failed: %s", sig->signame, ERR);
@@ -654,13 +677,13 @@ static void daemond_sig_set(daemond * d, daemond_sig_t * sig) {
 }
 
 void daemond_sig_init(daemond * d) {
-	
+
 	daemond_sig_was_received = 0;
 	memset( (void *) daemond_sig_received,0,NSIG );
-	
+
 	daemond_sig_t     *sig;
 	//struct sigaction   sa;
-	
+
 	for (sig = signals; sig->signo != 0; sig++) {
 		daemond_sig_set(d, sig);
 	}
@@ -674,14 +697,14 @@ void daemond_daemonize(daemond * d) {
 	int fd, status;//, pidf
 	pid_t pid, gone;
 	double t;
-	
+
 	if(!d->detach)
 		return;
 	if (d->detached) {
 		warn("Process already detached");
 		return;
 	}
-	
+
 	switch (pid = fork()) {
 		case -1:
 			return die("fork1 failed: %s", ERR);
@@ -706,7 +729,7 @@ void daemond_daemonize(daemond * d) {
 				usleep(100000);
 				fprintf(stdout,".");
 			}
-			
+
 			if (d->use_pid) {
 				daemond_printf(d, "<y>Reading new pid</>...");
 				t = htime();
@@ -721,7 +744,7 @@ void daemond_daemonize(daemond * d) {
 							colorprintf("<r>tired of waiting</>\n");
 							exit(255);
 						}
-						
+
 						fprintf(stdout,".");
 						usleep(100000);
 					} else {
@@ -731,7 +754,7 @@ void daemond_daemonize(daemond * d) {
 				}
 				daemond_printf(d, "<y>checking it's live</>...");
 				usleep(300000);
-				
+
 				if( kill(pid,0) == 0 ) {
 					colorprintf(" <g>looks ok</>\n");
 				} else {
@@ -739,12 +762,12 @@ void daemond_daemonize(daemond * d) {
 					exit(255);
 				}
 			}
-			
+
 			exit(0);
 	}
-	
+
 	//warn("i'm an intermediate process %d, fork again", getpid());
-	
+
 	switch (pid = fork()) {
 		case -1:
 			return die("fork2 failed: %s", ERR);
@@ -754,41 +777,41 @@ void daemond_daemonize(daemond * d) {
 			//warn("forked child: %d", pid);
 			exit(0);
 	}
-	
+
 	d->detached = 1;
 	if (d->use_pid)
 		daemond_pid_relock(&d->pid);
-	
+
 	//warn("i'm forked master process %d", getpid());
-	
+
 	if( setsid() == -1 ) {
 		return die("setsid failed");
 	}
-	
+
 	fd = open("/dev/null", O_RDWR);
-	
+
 	if (fd < 0) {
 		return die("open /dev/null failed: %s", ERR);
 	}
-	
+
 	if (dup2(fd, STDIN_FILENO) == -1) {
 		die("dup2(stdin) failed: %s",ERR);
 	}
-	
+
 	if (dup2(fd, STDOUT_FILENO) == -1) {
 		die("dup2(stdout) failed: %s",ERR);
 	}
-	
+
 	if (dup2(fd, STDERR_FILENO) == -1) {
 		die("dup2(stderr) failed: %s",ERR);
 	}
-	
+
 	if (fd > STDERR_FILENO) {
 		if (close(fd) == -1) {
 			warn("close(%d) failed: %s", fd, ERR);
 		}
 	}
-	
+
 	/*
 	fclose(stdout);
 	stdout = fdopen( STDOUT_FILENO, "w" );
@@ -840,7 +863,7 @@ void daemond_log_std_read(daemond * d) {
 
 	fflush(stdout);
 	fflush(stderr);
-	
+
 	while(1) {
 		got = read(d->stdout_fd, p, end - p);
 		if (got > 0) {
@@ -883,17 +906,17 @@ void daemond_log_std_read(daemond * d) {
  */
 
 void daemond_init(daemond * d) {
-	
-	
+
+
 	bzero(d,sizeof(*d));
-	
+
 	d->use_pid          = 1;
 	d->children_count   = 1;
 	d->max_die          = 3;   // max die before raising restart interval
 	d->min_restart_interval =  // double seconds
 	d->restart_interval = 0.1; // double seconds
 	d->max_restart_interval = 30; // double seconds
-	
+
 	d->cli.d = d;
 	d->pid.d = d;
 }
@@ -914,7 +937,7 @@ void daemond_sig_child_handler(int sig) {
 static void daemond_spawned(daemond * d) {
 
 /*
-	
+
 	daemond_sig_t child_signals[] = {
 		{ SIGINT,  "SIGINT",           0,            "", NULL, daemond_sig_child_sihandler },
 		{ SIGTERM, "SIGTERM",          0,            "", NULL, daemond_sig_child_sihandler },
@@ -923,7 +946,7 @@ static void daemond_spawned(daemond * d) {
 		{ SIGPIPE, "SIGPIPE, SIG_IGN", 0,            "", SIG_IGN, NULL },
 		{ 0,        NULL,              0,            "", NULL, NULL }
 	};
-	
+
 	daemond_sig_t child_signals[] = {
 		{ SIGINT,  "SIGINT",           0,            "", daemond_sig_child_handler, NULL },
 		{ SIGTERM, "SIGTERM",          0,            "", daemond_sig_child_handler, NULL },
@@ -941,9 +964,9 @@ static void daemond_spawned(daemond * d) {
 		{ SIGPIPE, "SIGPIPE, SIG_IGN", 0,            "", SIG_IGN, NULL },
 		{ 0,        NULL,              0,            "", NULL, NULL }
 	};
-	
+
 	daemond_sig_t     *sig;
-	
+
 	for (sig = child_signals; sig->signo != 0; sig++) {
 		daemond_sig_set(d, sig);
 	}
@@ -960,7 +983,7 @@ static void daemond_spawned(daemond * d) {
 int daemond_fork(daemond * d, int slot) {
 	pid_t pid;
 	//char *argv[] = { "echo", "echo", "ok", 0 };
-	
+
 	switch (pid = fork()) {
 		case -1:
 			die("fork failed: %s", ERR);
@@ -1056,7 +1079,7 @@ static void daemond_reaper(daemond * d) {
 				d->last_die_count = d->die_count = 0;
 				d->fork_at = htime();
 			}
-	
+
 }
 
 
@@ -1079,7 +1102,7 @@ static void daemond_sig_safe_handler(daemond * d, int sig) {
 			debug("Signal %d received", sig);
 			break;
 	}
-	
+
 }
 
 static void daemond_sig_check(daemond * d) {
@@ -1094,34 +1117,34 @@ static void daemond_sig_check(daemond * d) {
 			}
 			daemond_sig_was_received = 0;
 		}
-	
+
 }
 
 void daemond_master(daemond * d) {
 	pid_t pid, children[ 10 ];
 	int i;//, sig
-	
+
 	bzero( children, sizeof(children) );
 	d->children = children;
 	d->children_running = 0;
 	d->fork_at  = htime();
-	
+
 	d->force_quit       = 1;
-	
+
 	daemond_sig_init(d);
-	
+
 	while(1) {
 		daemond_say(d,"xxx");
 		daemond_sig_check(d);
 		if (d->terminate)
 			break;
-		
+
 		/*
 			check_children will do forks. so if it's a master, it should leave within this loop.
 			otherwise it should go out
 			so, 0 is a child, 1 is a master
 		*/
-		
+
 		if ( ! daemond_check_children(d) ) {
 			return;
 		}
@@ -1163,11 +1186,11 @@ void daemond_master(daemond * d) {
 		}
 	}
 	*/
-	
+
 	daemond_say(d,"<y>terminating master");
 	exit(0);
 }
 
 // static void daemond_stop(daemond * d) {
-// 	
+//
 // }
