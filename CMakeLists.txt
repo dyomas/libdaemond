@@ -13,8 +13,8 @@ set(CMAKE_C_FLAGS_RELEASE "-g0 -O3" CACHE STRING "Release flags" FORCE)
 
 include_directories(src)
 add_library(libdaemond src/libdaemond.c)
-set_target_properties (libdaemond PROPERTIES DEBUG_POSTFIX _d)
 set_target_properties (libdaemond PROPERTIES OUTPUT_NAME daemond)
 
 add_executable(sample EXCLUDE_FROM_ALL ex/sample.cpp ex/strings_manip.cpp ex/io_wrapper.cpp)
+set_target_properties (sample PROPERTIES DEBUG_POSTFIX _d)
 target_link_libraries(sample libdaemond)
