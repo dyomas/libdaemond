@@ -61,8 +61,8 @@ typedef enum { START,CHECK,STOP,RESTART,EXTENDED } daemond_cli_com;
  */
 typedef void (*tracer_t)(const char * fmt, va_list va_args);
 
-void   set_tracer(const tracer_t);
-void   set_tracer_debug(const tracer_t);
+void   daemond_set_tracer(const tracer_t);
+void   daemond_set_tracer_debug(const tracer_t);
 
 void   daemond_say(daemond * d, const char * fmt, ...);
 

@@ -14,61 +14,6 @@
 
 using namespace std;
 
-typedef struct space_splitter
-{
-  static inline bool field_predicate (char arg)
-  {
-    return !isspace(arg);
-  }
-
-  static inline bool delimiter_predicate (char arg)
-  {
-    return isspace(arg) != 0;
-  }
-};
-
-template<char D> struct char_splitter
-{
-  static inline bool field_predicate (char arg)
-  {
-    return arg != D;
-  }
-
-  static inline bool delimiter_predicate (char arg)
-  {
-    return arg == D;
-  }
-};
-
-/**
-Деление строки на фрагменты. Контейнер T должен иметь методы insert и end -- вставка фрагмента строки производится в конец контейнера. S должен иметь пару предикатов field_predicate и delimiter_predicate, обнаруживающих начало нового фрагмента строки и начало разделителя соответственно
-*/
-template <typename T, typename S> void split_string(T &, const string &);
-template <typename T, typename S> void split_string_unique(T &, const string &);
-
-/**
-Деление строки на фрагменты по одному фрагменту за итерацию. Память для хранения результата, как в split_string не требуется
-*/
-bool parse_string(const char *&/*begin*/, const char *&/*end*/, const char */*src*/, const char /*delimiter*/);
-bool parse_string(const char *&/*begin*/, const char *&/*end*/, const char */*src*/, const char */*src_end*/, const char /*delimiter*/);
-/**
-Деление строки на фрагменты с объединением последовательных разделителей.
-Разделителями являются непечатаемые символы (пробел, табуляция и т. д.).
-Экранирование разделителей не учитывается
-*/
-bool parse_string(const char *&/*begin*/, const char *&/*end*/, const char */*src*/);
-bool parse_string(const char *&/*begin*/, const char *&/*end*/, const char */*src*/, const char */*src_end*/);
-
-void hex_to_array(uint8_t *, size_t &, const char *);
-void array_to_hex(char *, const uint8_t *, const size_t, const bool /*capitals*/ = false);
-
-const string cut_spaces(const char *);
-
-void replace_chars(string &, const char /*from*/, const char /*to*/);
-bool is_number(const char *);
-bool is_number(const string &);
-
-//TODO Необходимо контроллировать переполнение при преобразовании к целому, а также гарантировать непреодолимость правой границы буфера (функции strtol[l] могут выйти за эту границу при отстутствии нулевого байта)
 int8_t c_string_to_int8(const char *);
 uint8_t c_string_to_uint8(const char *);
 
@@ -104,7 +49,6 @@ void string_to_number(int64_t */*pres*/, const char */*begin*/, const char */*en
 void string_to_number(float */*pres*/, const char */*begin*/, const char */*end*/);
 void string_to_number(double */*pres*/, const char */*begin*/, const char */*end*/);
 
-//TODO Приведение регистра требуется с учетом кодировки
 void to_lower_case(string &);
 void to_lower_case(string &, const char *);
 void to_upper_case(string &);

@@ -143,11 +143,11 @@ static void debug_output(const char * fmt, ...) {
 	}
 }
 
-void set_tracer(const tracer_t tracer) {
+void daemond_set_tracer(const tracer_t tracer) {
 	_G_tracer = tracer;
 }
 
-void set_tracer_debug(const tracer_t tracer) {
+void daemond_set_tracer_debug(const tracer_t tracer) {
 	_G_tracer_debug = tracer;
 }
 
