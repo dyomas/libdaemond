@@ -98,42 +98,42 @@ fi
 #The actual commands
 if [ "$MODE" = "$MODE_DEFAULT" ];
 then
-  $EXECUTABLE -C1 -L3 -P $PID_FILE -- start
+  $EXECUTABLE -C1 -L3 -p $PID_FILE -- start
 
 elif [ "$MODE" = "A" ];
 then
-  $EXECUTABLE -C2 -L3 -N -P $PID_FILE -xabort -- start
+  $EXECUTABLE -C2 -L3 -N -p $PID_FILE -xabort -- start
 
 elif [ "$MODE" = "X" ];
 then
-  $EXECUTABLE -C2 -L3 -N -P $PID_FILE -xexcept -- start
+  $EXECUTABLE -C2 -L3 -N -p $PID_FILE -xexcept -- start
 
 elif [ "$MODE" = "E" ];
 then
-  $EXECUTABLE -C2 -L3 -N -P $PID_FILE -xexit -- start
+  $EXECUTABLE -C2 -L3 -N -p $PID_FILE -xexit -- start
 
 elif [ "$MODE" = "S" ];
 then
-  $EXECUTABLE -C2 -L3 -N -P $PID_FILE -xsf -- start
+  $EXECUTABLE -C2 -L3 -N -p $PID_FILE -xsf -- start
 
 elif [ "$MODE" = "C" ];
 then
-  $EXECUTABLE -N -P $PID_FILE -- check
+  $EXECUTABLE -N -p $PID_FILE -- check
 
 elif [ "$MODE" = "L" ];
 then
-  $EXECUTABLE -P $PID_FILE -mL &
-  $EXECUTABLE -P $PID_FILE -mL &
+  $EXECUTABLE -p $PID_FILE -mL &
+  $EXECUTABLE -p $PID_FILE -mL &
 
 elif [ "$MODE" = "W" ];
 then
-  $EXECUTABLE -P $PID_FILE -mL &
-  $EXECUTABLE -P $PID_FILE -mW &
+  $EXECUTABLE -p $PID_FILE -mL &
+  $EXECUTABLE -p $PID_FILE -mW &
 
 elif [ "$MODE" = "R" ];
 then
-  $EXECUTABLE -P $PID_FILE -mL &
-  $EXECUTABLE -P $PID_FILE -mR &
+  $EXECUTABLE -p $PID_FILE -mL &
+  $EXECUTABLE -p $PID_FILE -mR &
 
 fi
 

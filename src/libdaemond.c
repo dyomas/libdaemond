@@ -1006,7 +1006,7 @@ static int daemond_check_children(daemond * d) {
 		if (( pid = d->children[i] )) {
 			if ( kill(pid,0) == 0 ) {
 				// ok
-				daemond_say(d,"<g>pid %d (slot %d) is alive",pid, i);
+				//daemond_say(d,"<g>pid %d (slot %d) is alive",pid, i); //too often
 				running++;
 			} else {
 				daemond_say(d,"<r>no more child for slot %d with pid %d (%s)",i,pid, ERR);
@@ -1134,7 +1134,7 @@ void daemond_master(daemond * d) {
 	daemond_sig_init(d);
 
 	while(1) {
-		daemond_say(d,"xxx");
+		//daemond_say(d,"xxx"); //too often
 		daemond_sig_check(d);
 		if (d->terminate)
 			break;

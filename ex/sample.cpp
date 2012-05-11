@@ -35,7 +35,6 @@ void usage(const char *me)
     << "  -C - child processes count, default " << children_count_default << endl
     << "  -L - child life time, seconds, default " << child_life_time_default << endl
     << "  -N - no detach" << endl
-    << "  -P - PID file, not used if empty, default \"" << pidfile_default << "\"" << endl
     << "  -T - reset tracers with b/w standard stream (controlled by \"-o\" option)" << endl
     << "  -i - input, default stdin, persistent file recommended in detach mode" << endl
     << "  -m - mode (test name), default " << mode_default << ":" << endl
@@ -44,6 +43,7 @@ void usage(const char *me)
     << "    W - test_daemond_pid_write([-P])" << endl
     << "    R - test_daemond_pid_relock([-P])" << endl
     << "  -o - output, default stdout" << endl
+    << "  -p - PID file, not used if empty, default \"" << pidfile_default << "\"" << endl
     << "  -r - return value, default " << EXIT_SUCCESS << endl
     << "  -x - child exit way, default simply exit with decided code (controlled by \"-r\" option)" << endl
     << "    abort - call abort directly" << endl
@@ -353,7 +353,7 @@ int main(int argc, char *argv[])
 
   try
   {
-    while ((ch = getopt(argc, argv, "C:L:NP:Ti:m:o:r:x:h")) != -1)
+    while ((ch = getopt(argc, argv, "C:L:NTi:m:o:p:r:x:h")) != -1)
     {
       switch (ch)
       {
@@ -365,9 +365,6 @@ int main(int argc, char *argv[])
           break;
         case 'N':
           _G_detach = false;
-          break;
-        case 'P':
-          _G_pidfile = optarg;
           break;
         case 'T':
           daemond_set_tracer(bw_console_tracer);
@@ -381,6 +378,9 @@ int main(int argc, char *argv[])
           break;
         case 'o':
           _G_io.set_output(optarg);
+          break;
+        case 'p':
+          _G_pidfile = optarg;
           break;
         case 'r':
           ret_val_child = c_string_to_int8(optarg);
